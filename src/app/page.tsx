@@ -21,10 +21,48 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [urlStatus, setUrlStatus] = useState<UrlStatus>({});
+  const [checkedBatches, setCheckedBatches] = useState<number[]>([]);
+  const BATCH_SIZE = 9;
 
   useEffect(() => {
     fetchUrls();
   }, []);
+
+  // Intersection Observer for infinite scroll status checking
+  useEffect(() => {
+    if (filteredUrls.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const cardIndex = parseInt(entry.target.getAttribute('data-index') || '0');
+            const batchIndex = Math.floor(cardIndex / BATCH_SIZE);
+            
+            // Check if this batch needs to be processed
+            if (!checkedBatches.includes(batchIndex)) {
+              console.log('Card', cardIndex, 'is visible, checking batch', batchIndex);
+              checkUrlBatch(filteredUrls, batchIndex);
+            }
+          }
+        });
+      },
+      {
+        rootMargin: '50px', // Start loading slightly before the cards come into view
+        threshold: 0.1 // Trigger when 10% of the card is visible
+      }
+    );
+
+    // Observe all cards
+    const cards = document.querySelectorAll('.url-card');
+    cards.forEach((card) => {
+      observer.observe(card);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [filteredUrls, checkedBatches]);
 
   useEffect(() => {
     const filtered = urls.filter(url =>
@@ -48,11 +86,10 @@ export default function Dashboard() {
       setUrls(data.urls);
       setFilteredUrls(data.urls);
       
-      // Check URL status after loading
-      console.log('Starting status check in 1 second...');
+      // Check first batch of URLs after loading
+      console.log('Starting status check for first batch...');
       setTimeout(() => {
-        console.log('Calling checkUrlStatuses...');
-        checkUrlStatuses(data.urls);
+        checkUrlBatch(data.urls, 0);
       }, 1000); // Delay to avoid overwhelming the browser
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -65,23 +102,35 @@ export default function Dashboard() {
     window.open(url, '_blank');
   };
 
-  const checkUrlStatuses = async (urls: UrlEntry[]) => {
-    console.log('Starting URL status check for', urls.length, 'URLs');
-    const statusMap: UrlStatus = {};
+  const checkUrlBatch = async (urls: UrlEntry[], batchIndex: number) => {
+    if (checkedBatches.includes(batchIndex)) {
+      console.log('Batch', batchIndex, 'already checked');
+      return;
+    }
     
-    // Set all to checking initially
-    urls.forEach(url => {
+    const startIndex = batchIndex * BATCH_SIZE;
+    const endIndex = Math.min(startIndex + BATCH_SIZE, urls.length);
+    const batchUrls = urls.slice(startIndex, endIndex);
+    
+    console.log('Checking batch', batchIndex, 'URLs', startIndex, 'to', endIndex - 1);
+    
+    // Mark this batch as checked
+    setCheckedBatches(prev => [...prev, batchIndex]);
+    
+    // Set status to checking for this batch
+    const statusMap: UrlStatus = {};
+    batchUrls.forEach(url => {
       statusMap[url.id] = 'checking';
     });
-    setUrlStatus(statusMap);
+    setUrlStatus(prev => ({ ...prev, ...statusMap }));
     
-    // Check each URL status
-    for (const url of urls) {
+    // Check each URL in the batch
+    for (const url of batchUrls) {
       console.log('Checking status for:', url.title, 'at', url.url);
       try {
         // Use a HEAD request to check if URL is alive
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 200); // 0.5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
         const response = await fetch(url.url, {
           method: 'HEAD',
@@ -109,7 +158,7 @@ export default function Dashboard() {
       // Add small delay between checks to avoid overwhelming the browser
       await new Promise(resolve => setTimeout(resolve, 200));
     }
-    console.log('URL status check completed');
+    console.log('Batch', batchIndex, 'status check completed');
   };
 
   const StatusIndicator = ({ status }: { status: 'alive' | 'dead' | 'checking' }) => {
@@ -206,26 +255,10 @@ export default function Dashboard() {
 
       <div className="row g-4">
         {filteredUrls.map((url, index) => (
-          <div key={url.id} className="col-md-4">
+          <div key={url.id} className="col-md-4 url-card" data-index={index}>
             <div className="card h-100 shadow-sm position-relative">
               {console.log('Rendering card for', url.title, 'with status:', urlStatus[url.id] || 'checking')}
               <StatusIndicator status={urlStatus[url.id] || 'checking'} />
-              {/* {index === 0 && (
-                <div 
-                  className="position-absolute" 
-                  style={{
-                    top: '8px',
-                    right: '8px',
-                    width: '16px',
-                    height: '16px',
-                    backgroundColor: 'blue',
-                    borderRadius: '50%',
-                    border: '2px solid white',
-                    zIndex: 1001
-                  }}
-                  title="Test indicator"
-                />
-              )} */}
               <div className="card-body d-flex flex-column">
                 <h5 className="card-title text-primary">&nbsp;&nbsp;{url.title}</h5>
                 <p className="card-text flex-grow-1">{url.description}</p>

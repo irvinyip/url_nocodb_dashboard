@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   try {
     const apiUrl = process.env.NOCODB_API_URL;
+    const tableId = process.env.NOCODB_TABLE_ID;
     const apiToken = process.env.NOCODB_API_TOKEN;
     
     console.log('API Configuration Check:');
     console.log('- API URL exists:', !!apiUrl);
+    console.log('- Table ID exists:', !!tableId);
     console.log('- API Token exists:', !!apiToken);
     console.log('- API Token length:', apiToken?.length || 0);
     console.log('- API Token starts with:', apiToken?.substring(0, 5) + '...');
@@ -38,17 +40,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ urls: mockUrls });
     }
     
-    // Only proceed with API call if we have a valid token
-    if (!apiUrl) {
-      console.log('API URL not configured');
+    // Only proceed with API call if we have a valid token and table ID
+    if (!apiUrl || !tableId) {
+      console.log('API URL or Table ID not configured');
       return NextResponse.json(
-        { error: 'NocoDB API URL not configured' },
+        { error: 'NocoDB API URL or Table ID not configured' },
         { status: 500 }
       );
     }
 
-    console.log('Making API request to:', apiUrl);
-    const response = await fetch(apiUrl, {
+    // Construct the full API URL with hardcoded records endpoint
+    const fullApiUrl = `${apiUrl}${tableId}/records?offset=0&limit=1000`;
+    console.log('Making API request to:', fullApiUrl);
+    const response = await fetch(fullApiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
