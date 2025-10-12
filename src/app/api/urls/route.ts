@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const apiUrl = process.env.NOCODB_API_URL;
     const tableId = process.env.NOCODB_TABLE_ID;
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         const errorData = await response.text();
         console.log('Error response body:', errorData);
         errorDetails = errorData;
-      } catch (e) {
+      } catch {
         console.log('Could not parse error response');
       }
       
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     console.log('API Response data received:', !!data);
     
     // Transform NocoDB data to our expected format
-    const urls = data.list?.map((item: any) => ({
+    const urls = data.list?.map((item: { Id?: string; id?: string; Title?: string; title?: string; Url?: string; url?: string; Description?: string; description?: string }) => ({
       id: item.Id || item.id,
       title: item.Title || item.title,
       url: item.Url || item.url,

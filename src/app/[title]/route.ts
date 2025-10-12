@@ -7,6 +7,7 @@ export async function GET(
   try {
     const { title } = await params;
     const apiUrl = process.env.NOCODB_API_URL;
+    const tableId = process.env.NOCODB_TABLE_ID;
     const apiToken = process.env.NOCODB_API_TOKEN;
     
     // If no API token is provided, use mock data for testing
@@ -53,10 +54,19 @@ export async function GET(
       );
     }
 
-    console.log('Making API request to:', apiUrl);
+    if (!tableId) {
+      return NextResponse.json(
+        { error: 'NocoDB Table ID not configured' },
+        { status: 500 }
+      );
+    }
+
+    // Construct the full API URL using the same pattern as the main API route
+    const fullApiUrl = `${apiUrl}${tableId}/records?offset=0&limit=1000`;
+    console.log('Making API request to:', fullApiUrl);
     console.log('Using token starting with:', apiToken.substring(0, 5) + '...');
     
-    const response = await fetch(apiUrl, {
+    const response = await fetch(fullApiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -74,7 +84,7 @@ export async function GET(
         const errorData = await response.text();
         console.log('Error response body:', errorData);
         errorDetails = errorData;
-      } catch (e) {
+      } catch {
         console.log('Could not parse error response');
       }
       
@@ -87,7 +97,7 @@ export async function GET(
     console.log('Total records in response:', data.list?.length || 0);
     
     // Find the URL with matching title (case-insensitive, trimmed)
-    const urlEntry = data.list?.find((item: any) => {
+    const urlEntry = data.list?.find((item: { Title?: string; title?: string; Url?: string; url?: string }) => {
       const itemTitle = (item.Title || item.title)?.toLowerCase().trim();
       const searchTitle = title.toLowerCase().trim();
       console.log(`Comparing "${itemTitle}" with "${searchTitle}"`);

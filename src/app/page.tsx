@@ -26,7 +26,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchUrls();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Intersection Observer for infinite scroll status checking
   useEffect(() => {
@@ -62,7 +62,7 @@ export default function Dashboard() {
     return () => {
       observer.disconnect();
     };
-  }, [filteredUrls, checkedBatches]);
+  }, [filteredUrls, checkedBatches]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const filtered = urls.filter(url =>
@@ -75,13 +75,13 @@ export default function Dashboard() {
   const fetchUrls = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/urls');
+      const res = await fetch('/api/urls');
       
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error('Failed to fetch URLs');
       }
       
-      const data = await response.json();
+      const data = await res.json();
       console.log('Fetched URLs:', data.urls.length);
       setUrls(data.urls);
       setFilteredUrls(data.urls);
@@ -132,7 +132,7 @@ export default function Dashboard() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
-        const response = await fetch(url.url, {
+        await fetch(url.url, {
           method: 'HEAD',
           mode: 'no-cors', // This allows cross-origin requests
           signal: controller.signal
@@ -254,26 +254,28 @@ export default function Dashboard() {
       </div>
 
       <div className="row g-4">
-        {filteredUrls.map((url, index) => (
-          <div key={url.id} className="col-md-4 url-card" data-index={index}>
-            <div className="card h-100 shadow-sm position-relative">
-              {console.log('Rendering card for', url.title, 'with status:', urlStatus[url.id] || 'checking')}
-              <StatusIndicator status={urlStatus[url.id] || 'checking'} />
-              <div className="card-body d-flex flex-column">
-                <h5 className="card-title text-primary">&nbsp;&nbsp;{url.title}</h5>
-                <p className="card-text flex-grow-1">{url.description}</p>
-                <div className="d-flex justify-content-end">
-                  <button
-                    className="btn btn-success"
-                    onClick={() => handleGoClick(url.url)}
-                  >
-                    GO →
-                  </button>
+        {filteredUrls.map((url, index) => {
+          console.log('Rendering card for', url.title, 'with status:', urlStatus[url.id] || 'checking');
+          return (
+            <div key={url.id} className="col-md-4 url-card" data-index={index}>
+              <div className="card h-100 shadow-sm position-relative">
+                <StatusIndicator status={urlStatus[url.id] || 'checking'} />
+                <div className="card-body d-flex flex-column">
+                  <h5 className="card-title text-primary">&nbsp;&nbsp;{url.title}</h5>
+                  <p className="card-text flex-grow-1">{url.description}</p>
+                  <div className="d-flex justify-content-end">
+                    <button
+                      className="btn btn-success"
+                      onClick={() => handleGoClick(url.url)}
+                    >
+                      GO →
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredUrls.length === 0 && (
