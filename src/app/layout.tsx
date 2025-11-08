@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "NocoDB URL Shortener",
-  description: "URL shortening dashboard with NocoDB integration",
+  description: "URL shortening dashboard (NocoDB & Nextjs)",
 };
 
 export default function RootLayout({

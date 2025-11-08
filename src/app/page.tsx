@@ -232,8 +232,8 @@ export default function Dashboard() {
   return (
     <div className="container mt-4">
       <div className="text-center mb-4">
-        <h1 className="display-4">Nocodb URL Shortening Dashboard</h1>
-        <p className="lead">Manage and access your shortened URLs</p>
+        <h2 className="display-4">Nocodb URL Shortening Dashboard</h2>
+        <p className="lead">Nocodb, Nextjs, and Bootstrap 5 run on Docker</p>
       </div>
 
       <div className="row mb-4">
